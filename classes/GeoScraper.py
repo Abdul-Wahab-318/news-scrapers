@@ -70,14 +70,14 @@ class GeoScraper(Scraper):
 
             news_articles = self.extract_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
-            scraped_news_articles = self.scrape_article_content(latest_news_articles)
+            latest_news_articles = self.apply_NER(latest_news_articles)
+            #scraped_news_articles = self.scrape_article_content(latest_news_articles)
 
             print("prev : " , len(news_articles))
             print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
-        
-            self.save_articles(scraped_news_articles)      
-            self.cache_articles(news_articles)
+            #self.save_articles(scraped_news_articles)      
+            #self.cache_articles(news_articles)
             
         except Exception as e:
             print("Unknown Error : " , e)

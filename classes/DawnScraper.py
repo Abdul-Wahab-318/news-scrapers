@@ -64,7 +64,8 @@ class DawnScraper(Scraper):
         
         news_articles = self.extract_xml(xml_root)
         latest_news_articles = self.filter_articles(news_articles)
-
+        latest_news_articles = self.apply_NER(latest_news_articles)
+        
         self.save_articles(latest_news_articles)
         self.cache_articles(news_articles)
         

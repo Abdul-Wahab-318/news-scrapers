@@ -8,15 +8,18 @@ import time
 import os
 import schedule
 from pymongo import MongoClient
+import spacy
 
 MONGODB_URI='mongodb://localhost:27017/'
 URL='https://feeds.feedburner.com/geo/GiKR'
 class Scraper:
 
     def __init__(self , rss_url , cache_file_name ):
+        
         self.cache_path = os.path.abspath('cache\\' + cache_file_name)
         self.db_uri = "mongodb://localhost:27017/"
         self.rss_url = rss_url
+        self.nlp = spacy.load("en_core_web_trf" , disable=['tagger' , 'parser' , 'lemmatizer'])
         return None
 
     def get_xml_root(self , url):
@@ -48,8 +51,7 @@ class Scraper:
             return image_element['src']
         except Exception as e:
             print("Error processing img url")
-            return None
-            
+            return None         
     
     def find_disjoint(self , arr1, arr2):
         # Convert arrays to sets
@@ -80,6 +82,43 @@ class Scraper:
         
         articles = [ article for article in articles if article["title"] in current_titles ]
         
+        return articles
+    
+    def apply_NER(self , articles):
+        
+        ner_labels = [
+        "PERSON",      # People, including fictional
+        "NORP",        # Nationalities or religious or political groups
+        "FAC",         # Buildings, airports, highways, bridges, etc.
+        "ORG",         # Companies, agencies, institutions, etc.
+        "GPE",         # Countries, cities, states
+        "LOC",         # Non-GPE locations, mountain ranges, bodies of water
+        "PRODUCT",     # Objects, vehicles, foods, etc. (Not services)
+        "EVENT",       # Named hurricanes, battles, wars, sports events, etc.
+        "WORK_OF_ART", # Titles of books, songs, etc.
+        "LAW",         # Named documents made into laws
+        "LANGUAGE",    # Any named language
+        ]
+
+        for article in articles:
+            doc = self.nlp(article['title'])
+            
+            entities = {}
+            for ent in doc.ents:
+                
+                if ( ent.label_ not in ner_labels ): continue
+                
+                entity_text = ent.text.upper()
+                if ent.label_ in entities:
+                    entities[ent.label_].append(entity_text)
+                else:
+                    entities[ent.label_] = [entity_text]
+                    
+                article['entities'] = entities
+                
+            print("Title : " , article['title'])
+            print("entities : " , entities)
+            print("\n\n")
         return articles
     
     def extract_xml(self , root):
@@ -144,7 +183,6 @@ class Scraper:
 
         return news_articles
 
-
     def save_articles(self , articles):
     
         client = MongoClient(self.db_uri)
@@ -165,16 +203,16 @@ class Scraper:
 
         except Exception as e:
             raise Exception("Unable to find the document due to the following error: ", e)
-        
-        
+              
     def scrape(self):
         try:
             xml_root = self.get_xml_root(self.rss_url)
 
             news_articles = self.extract_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
+            latest_news_articles = self.apply_NER(latest_news_articles)
             scraped_news_articles = self.scrape_article_content(latest_news_articles)
-
+    
             print("prev : " , len(news_articles))
             print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
