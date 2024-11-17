@@ -22,27 +22,31 @@ class Scraper:
         self.nlp = spacy.load("en_core_web_trf" , disable=['tagger' , 'parser' , 'lemmatizer'])
         return None
 
-    def get_xml_root(self , url):
-        response = requests.get(url)
+    def get_xml_root(self , url , retries=3 , delay=2):
         
-        if(response.status_code == 200):
-            xml_content = response.text
-            return ET.fromstring(xml_content)
-        else:
-            print("could not fetch xml file : " , response.status_code)
-            return None
-
+        for attempt in range(1, retries+1):
+            try:
+                response = requests.get(url)
+                
+                if(response.status_code == 200):
+                    xml_content = response.text
+                    return ET.fromstring(xml_content)
+                else:
+                    print(f"Attempt {attempt}: Failed to fetch XML file - Status code {response.status_code}")
+                    if(attempt < retries):
+                        time.sleep(delay)
+                    else:
+                        print(f"Attempt {attempt}: Failed to fetch XML file - Status code {response.status_code}")
+                        raise Exception(f"HTTP Error while fetching XML file: {response.status_code}")
+                
+            except Exception as e:
+                raise Exception("Failed to fetch XML file")
+                
     def preprocess_publish_date(self , date):
         date_format = "%a, %d %b %Y %H:%M:%S %z"
         parsed_date = datetime.strptime(date , date_format)
 
         return parsed_date
-
-    def preprocess_description(self , description):
-        description = description.strip()
-        description_cleaned = re.sub(r'&mdash;|<p>|</p>|<p class="">', ' ', description)
-
-        return description_cleaned
 
     def preprocess_img_url(self , img_url):
         try:            
@@ -120,48 +124,6 @@ class Scraper:
             print("entities : " , entities)
             print("\n\n")
         return articles
-    
-    def extract_articles_from_xml(self , root):
-    
-        news_articles = []
-        for item in root[0].iter('item'):
-            title = item[0].text.strip()
-            link = item[1].text
-            publish_date = self.preprocess_publish_date(item[2].text)
-
-            description_and_image = item[4].text.strip().split("\n")
-            image_url = self.preprocess_img_url(description_and_image[0])
-            description = self.preprocess_description(description_and_image[1])
-            
-            news_articles.append({"title":title , 
-                                "link" :link , 
-                                "image_url" : image_url ,
-                                "publish_date":publish_date ,
-                                "scraped_date": datetime.now(),
-                                "source": 'Unknown' , 
-                                "description":description })
-            
-        return news_articles
-
-    def extract_content(self , page):
-        
-        try:
-            
-            content_area = page.find('div' , class_="content-area")
-
-            if(not content_area):
-                content_area = page.find('div' , class_="long-content")
-
-            content_area_paragraphs = content_area.findAll('p')
-            content_area_text = [ paragraph.text for paragraph in content_area_paragraphs]
-            content_area_text = " ".join(content_area_text)
-            content_area_text = content_area_text.replace('\xa0' , " ")
-            
-        except Exception as e:
-            print("Unknown Error scraping : " , e)
-            return None
-            
-        return content_area_text
 
     def cache_articles(self , articles):
         
@@ -169,15 +131,17 @@ class Scraper:
             for article in articles:
                 file.write(article["title"] + '\n')
 
-    def scrape_article_content(self , news_articles):
-        
+    #extracts the body for each article and returns the updated articles with body
+    #args: news_articles : list of news articles , parse_html_content : function that extracts the body from each article
+    def scrape_article_content(self , news_articles , parse_html_content ):
+
         for news in news_articles:
             url = news["link"]
             print(url)
             page = requests.get(url)
-            page_scraped = BeautifulSoup(page.text , "html.parser")
-            scraped_content = self.extract_content(page_scraped)
-            news["content"] = scraped_content
+            page_parsed = BeautifulSoup(page.text , "html.parser")
+            article_body = parse_html_content(page_parsed)
+            news["content"] = article_body
 
             time.sleep(5)
 
@@ -192,7 +156,7 @@ class Scraper:
             return
         
         try:
-            database = client.get_database("neutra_news")
+            database = client.get_database("neutra_news_mid")
             news_articles = database.get_collection("news_articles")
 
             result = news_articles.insert_many(articles)

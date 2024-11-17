@@ -13,12 +13,6 @@ class GeoScraper(Scraper):
         super().__init__( rss_url, cache_file_name)  
         return None
 
-    def preprocess_description(self , description):
-        description = description.strip()
-        description_cleaned = re.sub(r'&mdash;|<p>|</p>|<p class="">', ' ', description)
-        
-        return description_cleaned
-
     def extract_articles_from_xml(self , root):
     
         news_articles = []
@@ -41,7 +35,7 @@ class GeoScraper(Scraper):
             
         return news_articles
 
-    def extract_content(self , page):
+    def parse_html_content(self , page):
         
         try:
             content_area = page.find('div' , class_="content-area")
@@ -67,16 +61,16 @@ class GeoScraper(Scraper):
             news_articles = self.extract_articles_from_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
             latest_news_articles = self.apply_NER(latest_news_articles)
-            #scraped_news_articles = self.scrape_article_content(latest_news_articles)
+            scraped_news_articles = self.scrape_article_content( self.parse_html_content , latest_news_articles)
 
             print("prev : " , len(news_articles))
             print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
-            #self.save_articles(scraped_news_articles)      
-            #self.cache_articles(news_articles)
+            self.save_articles(scraped_news_articles)      
+            self.cache_articles(news_articles)
             
         except Exception as e:
-            print("Unknown Error : " , e)
+            print(f"Error scraping {self.source}  : " , e)
             
             
 geo_scraper = GeoScraper("https://feeds.feedburner.com/geo/GiKR" , "geo_cache.txt")
