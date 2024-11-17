@@ -3,15 +3,13 @@ import requests
 import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
-from datetime import datetime
+from datetime import datetime , timedelta
 import re
 import time
 import warnings
 import spacy
 from dotenv import load_dotenv
 import os
-import redis
-import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -25,7 +23,6 @@ class Scraper:
         self.source = source
         self.cache_key = f'{source}_articles'
         self.rss_url = rss_url
-        self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
         self.dbClient = MongoClient(MONGODB_URI)
         self.nlp = spacy.load("en_core_web_trf" , disable=['tagger' , 'parser' , 'lemmatizer'])
         return None
@@ -80,14 +77,24 @@ class Scraper:
     #disjoint between new and old to filter out duplicates
     def filter_articles(self , articles):
 
-        previous_titles = self.redis.get(self.cache_key)
+        today = datetime.utcnow()  # Use UTC to match MongoDB's ISODate format
+        start_of_day = datetime(today.year, today.month, today.day , 0 , 0 , 0 , 0)  # Start of the day
+        end_of_day = start_of_day + timedelta(days=1)  # Start of the next day
         
-        if( not previous_titles ):
+        db = self.dbClient.get_database("neutra_news_mid")
+        article_collection = db.get_collection("news_articles")
+        query = {'source' : self.source , "scraped_date" : { "$gte" :start_of_day , "$lte" : end_of_day } }
+        projection = {'link': 1, '_id': 1}
+        
+        previous_articles = list(article_collection.find(query , projection))
+        previous_links = [ article['link'] for article in previous_articles ]
+        print("Previous articles : " , len(previous_links))
+        
+        if( len(previous_links) == 0 ):
             return articles
-        
-        previous_titles = json.loads(previous_titles)
-        scraped_titles = [ article['link'] for article in articles ]
-        new_titles = self.find_disjoint(scraped_titles , previous_titles) 
+
+        scraped_links = [ article['link'] for article in articles ]
+        new_titles = self.find_disjoint(scraped_links , previous_links) 
         
         new_articles = [ article for article in articles if article["link"] in new_titles ]
         return new_articles
@@ -128,11 +135,6 @@ class Scraper:
             print("entities : " , entities)
             print("\n")
         return articles
-
-    def cache_articles(self , articles):
-        links = [ article['link'] for article in articles]
-        self.redis.set( self.cache_key ,json.dumps(links))
-
 
     #extracts the body for each article and returns the updated articles with body
     #args: news_articles : list of news articles , parse_html_content : function that extracts the body from each article
@@ -181,7 +183,7 @@ class Scraper:
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
         
             self.save_articles(scraped_news_articles)      
-            self.cache_articles(news_articles)
+            #self.cache_articles(news_articles)
             
         except Exception as e:
             print("Unknown Error : " , e)

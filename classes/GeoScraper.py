@@ -66,7 +66,6 @@ class GeoScraper(Scraper):
             print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             self.save_articles(scraped_news_articles)      
-            self.cache_articles(news_articles)
             
         except Exception as e:
             print(f"Error scraping {self.source}  : " , e)

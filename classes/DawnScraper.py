@@ -45,24 +45,27 @@ class DawnScraper(Scraper):
                                 "link" :link , 
                                 "publish_date":publish_date ,
                                 "scraped_date": datetime.now(),
-                                "source": "DAWN" , 
+                                "source": self.source, 
                                 "image_url" : image_url,
                                 "content":description })
             
         return news_articles
 
     def scrape(self):
-        
-        xml_root = self.get_xml_root(self.rss_url)
-        
-        news_articles = self.extract_articles_from_xml(xml_root)
-        latest_news_articles = self.filter_articles(news_articles)
-        latest_news_articles = self.apply_NER(latest_news_articles)
-        
-        self.save_articles(latest_news_articles)
-        self.cache_articles(news_articles)
-        
-        print("prev : " , len(news_articles))
-        print("new : " , len(latest_news_articles))
-        print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
+        try:
+            
+            xml_root = self.get_xml_root(self.rss_url)
+            
+            news_articles = self.extract_articles_from_xml(xml_root)
+            latest_news_articles = self.filter_articles(news_articles)
+            latest_news_articles = self.apply_NER(latest_news_articles)
+            
+            self.save_articles(latest_news_articles)
+            
+            print("prev : " , len(news_articles))
+            print("new : " , len(latest_news_articles))
+            print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
+            
+        except Exception as e:
+            print(f"Error Scraping {self.source} : " , e)
             

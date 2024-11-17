@@ -71,7 +71,6 @@ class TheNewsInternationalScraper(Scraper):
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
         
             self.save_articles(scraped_news_articles)      
-            self.cache_articles(news_articles)
             
         except Exception as e:
-            print("Unknown Error : " , e)
+            print(f"Error Scraping {self.source} : " , e)

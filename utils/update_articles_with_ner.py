@@ -36,7 +36,7 @@ def apply_NER(articles):
             else:
                 entities[ent.label_] = [entity_text]
                 
-            article['entities'] = entities
+        article['entities'] = entities
             
         print("Title : " , article['title'])
         print("entities : " , entities)
