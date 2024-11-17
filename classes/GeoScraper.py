@@ -1,9 +1,5 @@
 import re
-import time
-import os
 import re
-import schedule
-import requests
 from Scraper import Scraper
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -23,7 +19,7 @@ class GeoScraper(Scraper):
         
         return description_cleaned
 
-    def extract_xml(self , root):
+    def extract_articles_from_xml(self , root):
     
         news_articles = []
         for item in root[0].iter('item'):
@@ -68,7 +64,7 @@ class GeoScraper(Scraper):
         try:
             xml_root = self.get_xml_root(self.rss_url)
 
-            news_articles = self.extract_xml(xml_root)
+            news_articles = self.extract_articles_from_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
             latest_news_articles = self.apply_NER(latest_news_articles)
             #scraped_news_articles = self.scrape_article_content(latest_news_articles)
