@@ -1,20 +1,12 @@
-import re
-import time
-import os
-import re
-import schedule
-import requests
-from Scraper import Scraper
+from classes.Scraper import Scraper
 from datetime import datetime
 from bs4 import BeautifulSoup
-from pymongo import MongoClient
 import xml.etree.ElementTree as ET
 
 class TheNewsInternationalScraper(Scraper):
 
-    def __init__(self , rss_url , cache_file_name , source='Dawn'):
-        self.source = source
-        super().__init__( rss_url, cache_file_name)  
+    def __init__(self , rss_url="https://www.thenews.com.pk/rss/1/1" , source='The_News_International'):
+        super().__init__( rss_url, source)  
         return None
     
     def preprocess_CDATA(self , CDATA):
@@ -42,7 +34,7 @@ class TheNewsInternationalScraper(Scraper):
                     "link" :link , 
                     "publish_date":publish_date ,
                     "scraped_date": datetime.now(),
-                    "source": "THE NEWS INTERNATIONAL" , 
+                    "source": self.source , 
                     "image_url" : image_url,
                     })
                 
@@ -50,14 +42,14 @@ class TheNewsInternationalScraper(Scraper):
             print("Error extracting xml : "  , e)
         return news_articles
     
-    def extract_content(self , page):
+    def parse_html_content(self , page):
     
         try:
             content_area = page.find('div' , class_="story-detail")
             content_area_paragraphs = content_area.findAll('p')
             content_area_text = [ paragraph.text for paragraph in content_area_paragraphs]
             content_area_text = " ".join(content_area_text)
-            content_area_text = content_area_text.replace('\xa0' , " ")
+            content_area_text = self.clean_text(content_area_text)
             
         except Exception as e:
             print("Unknown Error during HTML parsing : " , e)
@@ -72,18 +64,14 @@ class TheNewsInternationalScraper(Scraper):
             news_articles = self.extract_articles_from_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
             latest_news_articles = self.apply_NER(latest_news_articles)
-            scraped_news_articles = self.scrape_article_content(latest_news_articles)
+            scraped_news_articles = self.scrape_article_content(latest_news_articles , self.parse_html_content)
 
             print("prev : " , len(news_articles))
             print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
         
-            #self.save_articles(scraped_news_articles)      
-            #self.cache_articles(news_articles)
+            self.save_articles(scraped_news_articles)      
+            self.cache_articles(news_articles)
             
         except Exception as e:
             print("Unknown Error : " , e)
-
-
-news_scraper = TheNewsInternationalScraper("https://www.thenews.com.pk/rss/1/1" , "the_news_international_cache.txt")
-news_scraper.scrape()

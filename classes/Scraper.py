@@ -1,28 +1,39 @@
 
 import requests
 import xml.etree.ElementTree as ET
-import re
-from datetime import datetime
 from bs4 import BeautifulSoup
-import time
-import os
-import schedule
 from pymongo import MongoClient
+from datetime import datetime
+import re
+import time
+import warnings
 import spacy
+from dotenv import load_dotenv
+import os
+import redis
+import json
 
-MONGODB_URI='mongodb://localhost:27017/'
-URL='https://feeds.feedburner.com/geo/GiKR'
+# Load environment variables from .env file
+load_dotenv()
+REDIS_PORT = os.getenv('REDIS_PORT')
+REDIS_HOST = os.getenv('REDIS_HOST')
+MONGODB_URI = os.getenv('MONGODB_URI')
+
 class Scraper:
 
-    def __init__(self , rss_url , cache_file_name ):
-        
-        self.cache_path = os.path.abspath('cache\\' + cache_file_name)
-        self.db_uri = "mongodb://localhost:27017/"
+    def __init__(self , rss_url , source ):
+        self.source = source
+        self.cache_key = f'{source}_articles'
         self.rss_url = rss_url
+        self.redis = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+        self.dbClient = MongoClient(MONGODB_URI)
         self.nlp = spacy.load("en_core_web_trf" , disable=['tagger' , 'parser' , 'lemmatizer'])
         return None
 
-    def get_xml_root(self , url , retries=3 , delay=2):
+    def clean_text(self , text):
+        return re.sub(r'[\x00-\x1F\x7F]|[^\x20-\x7E]|\s+', ' ', text)
+    
+    def get_xml_root(self , url , retries=3 , delay=1):
         
         for attempt in range(1, retries+1):
             try:
@@ -63,30 +74,23 @@ class Scraper:
         set2 = set(arr2)
         
         # Find disjoint elements
-        disjoint = set1.difference(set2)
-        print("disjoint : " , set1.difference(set2) )
-        #  convert to list
-        disjoint = list(disjoint)
-        
+        disjoint = list(set1.difference(set2))
         return disjoint
     
+    #disjoint between new and old to filter out duplicates
     def filter_articles(self , articles):
-        try:
-            
-            current_titles = [ article['title'] for article in articles ]
-            
-            with open(os.path.abspath(self.cache_path) , 'r') as file:
-                prev_titles = file.readlines()
-                prev_titles = [ title.strip() for title in prev_titles ]
+
+        previous_titles = self.redis.get(self.cache_key)
         
-            current_titles = self.find_disjoint(current_titles , prev_titles)
-            
-        except FileNotFoundError as e:
-            print(f"Error: {e}")
+        if( not previous_titles ):
+            return articles
         
-        articles = [ article for article in articles if article["title"] in current_titles ]
+        previous_titles = json.loads(previous_titles)
+        scraped_titles = [ article['link'] for article in articles ]
+        new_titles = self.find_disjoint(scraped_titles , previous_titles) 
         
-        return articles
+        new_articles = [ article for article in articles if article["link"] in new_titles ]
+        return new_articles
     
     def apply_NER(self , articles):
         
@@ -118,26 +122,25 @@ class Scraper:
                 else:
                     entities[ent.label_] = [entity_text]
                     
-                article['entities'] = entities
+            article['entities'] = entities
                 
             print("Title : " , article['title'])
             print("entities : " , entities)
-            print("\n\n")
+            print("\n")
         return articles
 
     def cache_articles(self , articles):
-        
-        with open(os.path.abspath(self.cache_path) , 'w') as file:
-            for article in articles:
-                file.write(article["title"] + '\n')
+        links = [ article['link'] for article in articles]
+        self.redis.set( self.cache_key ,json.dumps(links))
+
 
     #extracts the body for each article and returns the updated articles with body
     #args: news_articles : list of news articles , parse_html_content : function that extracts the body from each article
-    def scrape_article_content(self , news_articles , parse_html_content ):
+    def scrape_article_content(self , news_articles , parse_html_content):
 
         for news in news_articles:
             url = news["link"]
-            print(url)
+            print("GET:" , url)
             page = requests.get(url)
             page_parsed = BeautifulSoup(page.text , "html.parser")
             article_body = parse_html_content(page_parsed)
@@ -148,23 +151,19 @@ class Scraper:
         return news_articles
 
     def save_articles(self , articles):
-    
-        client = MongoClient(self.db_uri)
-        
+                
         if(len(articles) == 0):
             print('No articles to insert')
             return
         
         try:
-            database = client.get_database("neutra_news_mid")
+            database = self.dbClient.get_database("neutra_news_mid")
             news_articles = database.get_collection("news_articles")
 
             result = news_articles.insert_many(articles)
 
             print("Articles inserted : " , len(result.inserted_ids))
-
-            client.close()
-
+            self.dbClient.close()
         except Exception as e:
             raise Exception("Unable to find the document due to the following error: ", e)
               
@@ -188,3 +187,4 @@ class Scraper:
             print("Unknown Error : " , e)
             
             
+warnings.filterwarnings("ignore", category=FutureWarning, message=".*torch.*")

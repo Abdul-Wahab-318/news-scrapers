@@ -1,29 +1,22 @@
 import re
-import time
-import os
-import re
-import schedule
-import requests
-from Scraper import Scraper
+from classes.Scraper import Scraper
 from datetime import datetime
 from bs4 import BeautifulSoup
-from pymongo import MongoClient
 import xml.etree.ElementTree as ET
 
 class DawnScraper(Scraper):
 
-    def __init__(self , rss_url , cache_file_name , source='Dawn'):
-        self.source = source
-        super().__init__( rss_url, cache_file_name)  
+    def __init__(self , rss_url = "https://www.dawn.com/feeds/home" , source='Dawn'):
+        super().__init__( rss_url, source)  
         return None
 
     def preprocess_description(self , description):
         html = BeautifulSoup(description , 'lxml')
         description = html.get_text().strip().replace('\n' ,' ')
-        
+        description = self.clean_text(description)
         return description
 
-    def extract_xml(self , root):
+    def extract_articles_from_xml(self , root):
     
         news_articles = []
         namespaces = {'media': 'http://search.yahoo.com/mrss/'}
@@ -36,7 +29,7 @@ class DawnScraper(Scraper):
             description = self.preprocess_description(item.find('description').text)
             category = item.find('category').text.strip()
             publish_date = self.preprocess_publish_date(item.find('pubDate').text)
-            image_url = item.find('media:content', namespaces)#.get('url')
+            image_url = item.find('media:content', namespaces)
             
             if(category != 'Pakistan'):
                 continue
@@ -62,7 +55,7 @@ class DawnScraper(Scraper):
         
         xml_root = self.get_xml_root(self.rss_url)
         
-        news_articles = self.extract_xml(xml_root)
+        news_articles = self.extract_articles_from_xml(xml_root)
         latest_news_articles = self.filter_articles(news_articles)
         latest_news_articles = self.apply_NER(latest_news_articles)
         
@@ -73,6 +66,3 @@ class DawnScraper(Scraper):
         print("new : " , len(latest_news_articles))
         print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             
-            
-geo_scraper = DawnScraper("https://www.dawn.com/feeds/home" , "dawn_cache.txt")
-geo_scraper.scrape()

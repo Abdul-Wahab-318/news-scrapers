@@ -1,3 +1,4 @@
 .env
 cache/ 
 nn_webscraper
+venv
