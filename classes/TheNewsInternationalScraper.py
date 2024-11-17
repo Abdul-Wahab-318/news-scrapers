@@ -64,7 +64,7 @@ class TheNewsInternationalScraper(Scraper):
             news_articles = self.extract_articles_from_xml(xml_root)
             latest_news_articles = self.filter_articles(news_articles)
             latest_news_articles = self.apply_NER(latest_news_articles)
-            scraped_news_articles = self.scrape_article_content(latest_news_articles , self.parse_html_content)
+            scraped_news_articles = self.scrape_article_content(latest_news_articles[:1] , self.parse_html_content)
 
             print("prev : " , len(news_articles))
             print("new : " , len(latest_news_articles))

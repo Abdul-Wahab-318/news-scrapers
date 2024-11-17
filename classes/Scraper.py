@@ -65,6 +65,7 @@ class Scraper:
             print("Error processing img url")
             return None         
     
+    #disjoint between new and old to filter out duplicates
     def find_disjoint(self , arr1, arr2):
         # Convert arrays to sets
         set1 = set(arr1)
@@ -74,29 +75,32 @@ class Scraper:
         disjoint = list(set1.difference(set2))
         return disjoint
     
-    #disjoint between new and old to filter out duplicates
-    def filter_articles(self , articles):
+    def filter_articles(self, articles):
 
-        today = datetime.utcnow()  # Use UTC to match MongoDB's ISODate format
-        start_of_day = datetime(today.year, today.month, today.day , 0 , 0 , 0 , 0)  # Start of the day
-        end_of_day = start_of_day + timedelta(days=1)  # Start of the next day
-        
+        now = datetime.now()
+        twenty_four_hours_ago = now - timedelta(days=1)
+
         db = self.dbClient.get_database("neutra_news_mid")
         article_collection = db.get_collection("news_articles")
-        query = {'source' : self.source , "scraped_date" : { "$gte" :start_of_day , "$lte" : end_of_day } }
+        
+        # Fetch articles scraped in the last 24 hours
+        query = {
+            'source': self.source,
+            "scraped_date": {"$gte": twenty_four_hours_ago}  # Articles scraped in the last 24 hours
+        }
         projection = {'link': 1, '_id': 1}
-        
-        previous_articles = list(article_collection.find(query , projection))
-        previous_links = [ article['link'] for article in previous_articles ]
-        print("Previous articles : " , len(previous_links))
-        
-        if( len(previous_links) == 0 ):
+
+        previous_articles = list(article_collection.find(query, projection))
+        previous_links = [article['link'] for article in previous_articles]
+        print("Previous articles:", len(previous_links))
+
+        if len(previous_links) == 0:
             return articles
 
-        scraped_links = [ article['link'] for article in articles ]
-        new_titles = self.find_disjoint(scraped_links , previous_links) 
-        
-        new_articles = [ article for article in articles if article["link"] in new_titles ]
+        scraped_links = [article['link'] for article in articles]
+        new_titles = self.find_disjoint(scraped_links, previous_links)
+
+        new_articles = [article for article in articles if article["link"] in new_titles]
         return new_articles
     
     def apply_NER(self , articles):
@@ -131,9 +135,9 @@ class Scraper:
                     
             article['entities'] = entities
                 
-            print("Title : " , article['title'])
-            print("entities : " , entities)
-            print("\n")
+            # print("Title : " , article['title'])
+            # print("entities : " , entities)
+
         return articles
 
     #extracts the body for each article and returns the updated articles with body
