@@ -164,7 +164,7 @@ class Scraper:
         
         try:
             database = self.dbClient.get_database("neutra_news_mid")
-            news_articles = database.get_collection("news_articles")
+            news_articles = database.get_collection("articles")
 
             result = news_articles.insert_many(articles)
 
