@@ -32,10 +32,14 @@ class TheNewsInternationalScraper(Scraper):
                 news_articles.append({
                     "title":title , 
                     "link" :link , 
+                    "news_category" : "pakistan",
                     "publish_date":publish_date ,
                     "scraped_date": datetime.now(),
                     "source": self.source , 
                     "image_url" : image_url,
+                    "status" : "scraped",
+                    "clicks" : 0,
+                    "blindspot" : False 
                     })
                 
         except Exception as e:

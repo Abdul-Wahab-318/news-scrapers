@@ -41,13 +41,19 @@ class DawnScraper(Scraper):
             
             print(link)
             
-            news_articles.append({"title":title , 
-                                "link" :link , 
-                                "publish_date":publish_date ,
-                                "scraped_date": datetime.now(),
-                                "source": self.source, 
-                                "image_url" : image_url,
-                                "content":description })
+            news_articles.append({
+                "title":title , 
+                "link" :link , 
+                "news_category" : "pakistan",
+                "publish_date":publish_date ,
+                "scraped_date": datetime.now(),
+                "source": self.source, 
+                "image_url" : image_url,
+                "clicks" : 0,
+                "status" : "scraped",
+                "blindspot" : False ,
+                "content":description
+                })
             
         return news_articles
 

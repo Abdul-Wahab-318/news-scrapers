@@ -26,7 +26,7 @@ class GeoScraper(Scraper):
                 "publish_date":publish_date ,
                 "scraped_date": datetime.now(),
                 "source": self.source,
-                "news_category": "Pakistan",
+                "news_category": "pakistan",
                 "blindspot" : False ,
                 "status" : "scraped",
                 "clicks" : 0
