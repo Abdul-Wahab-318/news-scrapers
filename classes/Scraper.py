@@ -81,7 +81,7 @@ class Scraper:
         twenty_four_hours_ago = now - timedelta(days=1)
 
         db = self.dbClient.get_database("neutra_news_mid")
-        article_collection = db.get_collection("news_articles")
+        article_collection = db.get_collection("articles")
         
         # Fetch articles scraped in the last 24 hours
         query = {
@@ -187,7 +187,6 @@ class Scraper:
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
         
             self.save_articles(scraped_news_articles)      
-            #self.cache_articles(news_articles)
             
         except Exception as e:
             print("Unknown Error : " , e)

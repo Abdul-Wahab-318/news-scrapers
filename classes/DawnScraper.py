@@ -39,7 +39,7 @@ class DawnScraper(Scraper):
             else:
                 image_url = None
             
-            print(link)
+            print("GET:" , link)
             
             news_articles.append({
                 "title":title , 

@@ -10,8 +10,8 @@ def main():
     news_international_scraper = TheNewsInternationalScraper()
     
     dawn_scraper.scrape()
-    geo_scraper.scrape()
-    news_international_scraper.scrape()
-    send_cluster_request()
+    #geo_scraper.scrape()
+    #news_international_scraper.scrape()
+    #send_cluster_request()
     
 main()
