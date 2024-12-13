@@ -55,6 +55,7 @@ class GeoScraper(Scraper):
 
     def scrape(self):
         try:
+            print("Scraping " , self.source , " : \n") 
             xml_root = self.get_xml_root(self.rss_url)
 
             news_articles = self.extract_articles_from_xml(xml_root)
@@ -62,11 +63,9 @@ class GeoScraper(Scraper):
             latest_news_articles = self.apply_NER(latest_news_articles)
             scraped_news_articles = self.scrape_article_content( latest_news_articles ,self.parse_html_content )
 
-            print("prev : " , len(news_articles))
-            print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             self.save_articles(scraped_news_articles)      
-            
+            print("\n\n")
         except Exception as e:
             print(f"Error scraping {self.source}  : " , e)
             

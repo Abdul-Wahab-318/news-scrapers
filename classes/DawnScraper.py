@@ -59,7 +59,7 @@ class DawnScraper(Scraper):
 
     def scrape(self):
         try:
-            
+            print("Scraping " , self.source , " : \n") 
             xml_root = self.get_xml_root(self.rss_url)
             
             news_articles = self.extract_articles_from_xml(xml_root)
@@ -68,10 +68,8 @@ class DawnScraper(Scraper):
             
             self.save_articles(latest_news_articles)
             
-            print("prev : " , len(news_articles))
-            print("new : " , len(latest_news_articles))
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
-            
+            print("\n\n")
         except Exception as e:
             print(f"Error Scraping {self.source} : " , e)
             

@@ -92,7 +92,6 @@ class Scraper:
 
         previous_articles = list(article_collection.find(query, projection))
         previous_links = [article['link'] for article in previous_articles]
-        print("Previous articles:", len(previous_links))
 
         if len(previous_links) == 0:
             return articles
