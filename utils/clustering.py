@@ -4,7 +4,7 @@ def send_cluster_request(retries=3 , delay=1):
     
     for attempt in range(1, retries+1):
         try:
-            response = requests.post("http://127.0.0.1:8000/cluster-articles/")
+            response = requests.post("http://127.0.0.1:8000/articles/cluster")
             
             if(response.status_code == 200):
                 print("Sent cluster request : " , response.status_code)

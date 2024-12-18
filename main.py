@@ -1,4 +1,3 @@
-from classes.Scraper import Scraper
 from classes.DawnScraper import DawnScraper
 from classes.GeoScraper import GeoScraper
 from classes.TheNewsInternationalScraper import TheNewsInternationalScraper

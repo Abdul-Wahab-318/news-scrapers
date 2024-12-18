@@ -24,6 +24,7 @@ class Scraper:
         self.cache_key = f'{source}_articles'
         self.rss_url = rss_url
         self.dbClient = MongoClient(MONGODB_URI)
+        self.db = self.dbClient.get_database('neutra_news_final')
         self.nlp = spacy.load("en_core_web_trf" , disable=['tagger' , 'parser' , 'lemmatizer'])
         return None
 
@@ -80,8 +81,7 @@ class Scraper:
         now = datetime.now()
         twenty_four_hours_ago = now - timedelta(days=1)
 
-        db = self.dbClient.get_database("neutra_news_mid")
-        article_collection = db.get_collection("articles")
+        article_collection = self.db.get_collection("articles")
         
         # Fetch articles scraped in the last 24 hours
         query = {
@@ -151,7 +151,7 @@ class Scraper:
             article_body = parse_html_content(page_parsed)
             news["content"] = article_body
 
-            time.sleep(5)
+            time.sleep(2)
 
         return news_articles
 
@@ -162,8 +162,7 @@ class Scraper:
             return
         
         try:
-            database = self.dbClient.get_database("neutra_news_mid")
-            news_articles = database.get_collection("articles")
+            news_articles = self.db.get_collection("articles")
 
             result = news_articles.insert_many(articles)
 

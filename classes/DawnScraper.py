@@ -70,6 +70,7 @@ class DawnScraper(Scraper):
             
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             print("\n\n")
+            
         except Exception as e:
             print(f"Error Scraping {self.source} : " , e)
             

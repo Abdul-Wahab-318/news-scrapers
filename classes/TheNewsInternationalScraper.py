@@ -71,8 +71,8 @@ class TheNewsInternationalScraper(Scraper):
             latest_news_articles = self.apply_NER(latest_news_articles)
             scraped_news_articles = self.scrape_article_content(latest_news_articles , self.parse_html_content)
 
-            print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             self.save_articles(scraped_news_articles)      
+            print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             print("\n\n")
             
         except Exception as e:
