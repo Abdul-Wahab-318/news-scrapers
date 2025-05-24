@@ -1,8 +1,10 @@
 from abc import ABC , abstractmethod
-from playwright.sync_api import sync_playwright
+from patchright.sync_api import sync_playwright
+#from playwright_stealth import stealth_sync
 from classes.Scraper import Scraper
 from bs4 import BeautifulSoup
 import time
+import random
 
 class PlaywrightScrapper(ABC , Scraper):
     
@@ -20,8 +22,8 @@ class PlaywrightScrapper(ABC , Scraper):
                 context =  browser.new_context()
                 page =  context.new_page()
                 
-                page.goto(self.rss_url , timeout=10000)
-                page.wait_for_selector("body", timeout=10000)
+                page.goto(self.rss_url , timeout=60000)
+                page.wait_for_selector("body", timeout=60000)
                 html_content = page.content()
                 
                 browser.close()
@@ -42,22 +44,24 @@ class PlaywrightScrapper(ABC , Scraper):
                 browser = playwright.chromium.launch(headless=False)
                 context = browser.new_context()
                 page = browser.new_page()
+                #stealth_sync(page)
                 
-                for article in news_articles:
+                for article in news_articles[:1]:
                     
                     try:
-                        
-                        page.goto(article['link'] , timeout=10000)
-                        page.wait_for_selector("#content" , timeout=10000) # wait for main content div
-                        page_content = page.query_selector("article.single-article").inner_html()
-                        page_content = BeautifulSoup(page_content , 'html.parser')
+                        time.sleep(random.uniform(5, 10))
+                        page.goto(article['link'] , timeout=60000)
+                        page.wait_for_selector(".article-content" , timeout=60000) # wait for main content div
+                        page_content = page.content()
+                        print("GOT ARTICLE PAGE , length :  " , len(page_content))
                         
                         article_contents = parse_html_content(page_content)
-                        articles.append({
-                            **article,
-                            **article_contents
-                        })
-                        time.sleep(4)
+                        # articles.append({
+                        #     **article,
+                        #     **article_contents
+                        # })
+                        
+                        return articles
                     
                     except Exception as e:
                         print("Error scraping article : " , article['link'])
@@ -68,6 +72,7 @@ class PlaywrightScrapper(ABC , Scraper):
         except Exception as e:
             print(f"ERROR : error scraping articles in scrape_article_content , source : {self.source}")
             raise Exception(f"ERROR : error scraping articles in scrape_article_content , source : {self.source}")
+
 
     @abstractmethod
     def scrape(self):
