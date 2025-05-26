@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import requests
 import time
 import json
+import re
 
 class TheNationScraper(Scraper):
 
@@ -58,13 +59,18 @@ class TheNationScraper(Scraper):
             published_date = article.find("div" , class_="jeg_meta_date").text.strip() if article.find("div",class_="jeg_meta_date") else datetime.now()
             published_date = self.preprocess_publish_date(published_date)
             
-            image_url = article.select_one(".detail-page-main-image img")['src'] if article.select_one(".detail-page-main-image img") else None
+            img_tag = article.find("div" , class_="top-center lazyautosizes lazyloaded wp-post-image")
+            
+            if(img_tag):
+                img_tag_style = img_tag.get("style")
+                match = re.search(r'url\((.*?)\)', img_tag_style)
+                image_url = match.group(1) if match else None
             
             news_articles.append({
                 "title" : title ,
                 "link" : link ,
                 "source" : self.source,
-                "image_url" : image_url, 
+                "image_url" : image_url,
                 "news_category" : "pakistan" ,
                 "scraped_date" : datetime.now(),
                 "published_date" : published_date,
@@ -106,12 +112,9 @@ class TheNationScraper(Scraper):
             news_articles = self.extract_article_links_main_page(html_page)
             latest_news_articles = self.filter_articles(news_articles)
             latest_news_articles = self.apply_NER(latest_news_articles)
-            scraped_news_articles = self.scrape_article_content(news_articles , self.parse_html_content)
+            scraped_news_articles = self.scrape_article_content(latest_news_articles , self.parse_html_content)
 
-            with open("output.json", "w") as f:
-                json.dump(scraped_news_articles, f)
-
-            #self.save_articles(scraped_news_articles)      
+            self.save_articles(scraped_news_articles)      
             print('Time : ' , datetime.now().strftime("%A, %B %d, %Y %I:%M %p"))
             print("\n\n")
             
