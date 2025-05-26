@@ -48,7 +48,7 @@ class SamaaScraper(PlaywrightScrapper):
             print("main article : " , main_article.name)
             allowed_tags = set(['p','ul','li','h1','h2','h3','h4','h5','h6'])
             
-            published_date = page.select(".share-bar time").text if page.select(".share-bar time") is not None else None
+            published_date = main_article.select(".share-bar time").text if main_article.select(".share-bar time") is not None else None
             published_date = self.preprocess_publish_date(published_date)
             
             print("published date : " , published_date)
